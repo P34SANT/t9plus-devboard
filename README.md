@@ -213,6 +213,12 @@ FAN3: Pin 3 -> F20 (L15N), Pin 4 -> J18 (L14P)
   - `S1`: Hardware System RESET
   - `S2`: `MIO51` (PS User Button)
 
+### Startup LED Behavior (Why D7 Blinks and D5/D6/D8 are High)
+When the board boots using Bitmain's recovery `BOOT.BIN`, you will observe that **D7 blinks continuously** and **D5, D6, and D8 are driven high**:
+- Bitmain's `BOOT.BIN` contains three partitions: FSBL, an **embedded factory mining bitstream** (2.08 MB), and U-Boot.
+- The FSBL initializes DDR3 memory and immediately programs the FPGA with Bitmain's bitstream before U-Boot starts. In Bitmain's logic, D7 is a hardware clock-divider heartbeat signal and D5/D6/D8 default to high.
+- **This is completely normal.** The moment you load your own custom Vivado bitstream (`sudo load_bit your_design.bit`), the FPGA fabric is completely overwritten and the LEDs will behave according to your design.
+
 ---
 
 ## Programming the FPGA (Linux FPGA Manager)
@@ -270,6 +276,63 @@ except KeyboardInterrupt:
 
 ---
 
+## Embedded C / C++ Development (No Python Required)
+
+If you come from an **STM32, ESP32, or bare-metal embedded background**, you do not need to use Python. The dual-core ARM Cortex-A9 runs standard Linux with GCC, G++, Clang, GDB, and POSIX C APIs.
+
+### Direct Register Programming in C (`/dev/mem` + `mmap`)
+Just like writing directly to peripheral registers in STM32 CMSIS (`GPIOD->ODR |= (1 << 12)`), you can map physical AXI hardware registers directly to a C pointer:
+
+```c
+#include <stdio.h>
+#include <stdint.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+#define AXI_GPIO_BASE   0x41200000  // Base address from Vivado
+#define REG_DATA        0           // Channel 1 Data Register
+#define REG_TRI         1           // Channel 1 Tri-state Register
+
+int main() {
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    volatile uint32_t *gpio = (volatile uint32_t *)mmap(
+        NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, AXI_GPIO_BASE
+    );
+
+    gpio[REG_TRI] = 0x00000000;     // Set all pins as output
+    gpio[REG_DATA] = 0x01;          // Turn on D5 Red LED (M19)
+    usleep(500000);                 // 500 ms delay
+    gpio[REG_DATA] = 0x02;          // Turn on D6 Green LED (M17)
+
+    munmap((void *)gpio, 0x1000);
+    close(fd);
+    return 0;
+}
+```
+
+### Pre-Built C Examples Included in [`c_examples/`](c_examples/):
+- **`blink_axi_gpio.c`**: Bare-metal style register control for AXI GPIO (LEDs D5 Red `M19` and D6 Green `M17`).
+- **`blink_d3_mio.c`**: Direct C control of PS MIO37/38 (Bicolor LED D3, no FPGA bitstream required).
+- **`load_bit.c`**: High-speed compiled C FPGA bitstream loader that byte-swaps in memory and programs `/sys/class/fpga_manager/fpga0/firmware` in milliseconds.
+
+#### Compile on the Board:
+```bash
+cd ~/c_examples
+make
+sudo ./blink_d3_mio
+sudo ./load_bit my_design.bit
+sudo ./blink_axi_gpio
+```
+
+### Recommended IDE Workflow: VS Code Remote-SSH
+1. Install the **Remote - SSH** extension in VS Code on your PC.
+2. Connect to `xilinx@192.168.2.99`.
+3. Open `/home/xilinx/` as your workspace.
+4. Enjoy native C/C++ autocompletion, syntax highlighting, and GDB single-step debugging over the network.
+
+---
+
 ## Interactive Jupyter Starter Notebooks
 
 The repository includes ready-to-run Jupyter Notebooks pre-configured for the Antminer T9+ hardware. 
@@ -317,6 +380,11 @@ antminerT9Pynq/
 │   ├── uEnv.txt              # Safe serial console bootargs
 │   ├── build_uramdisk.py     # Pure-Python standalone cpio/uImage builder
 │   └── uramdisk_src/         # Static ARMv7 BusyBox binary
+├── c_examples/               # Embedded C examples for STM32/C developers
+│   ├── blink_axi_gpio.c      # Direct /dev/mem mmap register programming
+│   ├── blink_d3_mio.c        # Direct C control of PS MIO37/38 (LED D3)
+│   ├── load_bit.c            # Fast C FPGA bitstream loader
+│   └── Makefile              # Makefile for building on board
 ├── constraints/
 │   └── t9_v12_pins.xdc       # Complete Vivado constraints (LEDs, Clocks, Fans, J1-J9)
 ├── doc/
@@ -324,6 +392,7 @@ antminerT9Pynq/
 │   ├── B50612D-datasheet.pdf
 │   └── xc7z010clg400pkg.txt
 ├── examples/
+│   ├── blink_d3.py           # Python PS MIO37/38 LED D3 blinker
 │   ├── blink_led.py          # MMIO AXI GPIO LED blinker
 │   └── fpga_manager_load.py  # Python FPGA manager loader
 ├── notebooks/
