@@ -1,0 +1,3 @@
+# T9+ / S9 PYNQ Devboard uEnv.txt
+# Overrides Bitmain factory NAND ubi0 bootargs with clean serial console
+bootargs=console=ttyPS0,115200 root=/dev/ram0 rw

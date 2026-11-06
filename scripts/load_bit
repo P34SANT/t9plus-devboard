@@ -1,0 +1,33 @@
+#!/bin/bash
+# load_bit - Stream byte-swapped bitstream to Zynq FPGA Manager on Linux 6.6
+# Usage: sudo load_bit <bitstream.bit>
+#
+# Vivado-generated .bit files require endian byte-swapping (conv=swab)
+# before streaming to /sys/class/fpga_manager/fpga0/firmware.
+
+if [ $# -ne 1 ] || [ ! -f "$1" ]; then
+    echo "Usage: sudo load_bit <bitstream.bit>"
+    exit 1
+fi
+
+BITFILE="$1"
+BASENAME=$(basename "$BITFILE" .bit)
+SWAPPED="/tmp/${BASENAME}_swapped.bin"
+
+echo "==> Byte-swapping $BITFILE..."
+dd if="$BITFILE" of="$SWAPPED" bs=1 conv=swab 2>/dev/null
+
+echo "==> Copying to /lib/firmware/..."
+sudo mkdir -p /lib/firmware
+sudo cp "$SWAPPED" "/lib/firmware/${BASENAME}_swapped.bin"
+
+echo "==> Programming FPGA via Linux fpga_manager..."
+echo "${BASENAME}_swapped.bin" | sudo tee /sys/class/fpga_manager/fpga0/firmware > /dev/null
+
+if [ $? -eq 0 ]; then
+    echo "==> FPGA configuration successful! (D1 DONE LED should be lit)"
+    rm -f "$SWAPPED"
+else
+    echo "ERROR: FPGA programming failed"
+    exit 1
+fi
