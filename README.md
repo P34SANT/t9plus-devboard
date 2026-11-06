@@ -11,7 +11,7 @@ Enjoy dual-core ARM Cortex-A9 @ 667 MHz, 1 GB DDR3 RAM, Gigabit Ethernet, and 9x
 ## Start Here: Original Project vs. Why Use This Repo
 
 ### 1. Try the Original `opensatellite/antminer_t9` First
-We recommend checking out the original [opensatellite/antminer_t9](https://github.com/opensatellite/antminer_t9) repository first. It was the pioneering open-source effort to turn Antminer T9 boards into Zynq devboards and established many of the fundamental pinout tables and Vivado configurations used here.
+I recommend checking out the original [opensatellite/antminer_t9](https://github.com/opensatellite/antminer_t9) repository first. It was the pioneering open-source effort to turn Antminer T9 boards into Zynq devboards and established many of the fundamental pinout tables and Vivado configurations used here.
 
 If your board boots cleanly following the instructions in `opensatellite/antminer_t9`, you are all set!
 
@@ -22,9 +22,9 @@ Many users running **Antminer T9+ (Ctrl_C92 V1.2)** and **S9** boards encounter 
 2. **The `saveenv` NAND Brick Trap:** To get around bootloader issues, users often attempt to change U-Boot settings using `saveenv` at the serial console. On stock Bitmain boards, this is fatal: `CONFIG_ENV_OFFSET=0xE0000` directly overwrites the bootloader/bitstream partition in NAND flash, corrupting the factory bootloader.
 
 ### 3. How This Repo Solves Both Problems (The Trampoline Architecture)
-- **Proven Hardware Initialization:** We use the official Bitmain SD recovery `BOOT.BIN` (from `t9+-SD Tools.zip`), which is 100% proven to initialize the hardware, power sequencing, DDR3 memory, and MIO properly on every power cycle.
-- **Zero-Touch Trampoline Initramfs:** Stock Bitmain U-Boot executes a hardcoded `sdboot` command that always loads a recovery ramdisk (`root=/dev/ram`). Instead of modifying U-Boot or risking NAND, we replace the recovery ramdisk with our lightweight (~670 KB) **Trampoline Initramfs** (`uramdisk.image.gz`).
-- When U-Boot runs `sdboot`, our trampoline boots in under 1 second, detects the SD card's Partition 2 (`/dev/mmcblk0p2`), mounts the PYNQ ext4 filesystem, and calls:
+- **Proven Hardware Initialization:** I use the official Bitmain SD recovery `BOOT.BIN` (from `t9+-SD Tools.zip`), which is 100% proven to initialize the hardware, power sequencing, DDR3 memory, and MIO properly on every power cycle.
+- **Zero-Touch Trampoline Initramfs:** Stock Bitmain U-Boot executes a hardcoded `sdboot` command that always loads a recovery ramdisk (`root=/dev/ram`). Instead of modifying U-Boot or risking NAND, I replaced the recovery ramdisk with my custom lightweight (~670 KB) **Trampoline Initramfs** (`uramdisk.image.gz`).
+- When U-Boot runs `sdboot`, my trampoline boots in under 1 second, detects the SD card's Partition 2 (`/dev/mmcblk0p2`), mounts the PYNQ ext4 filesystem, and calls:
   ```sh
   exec switch_root /new_root /sbin/init
   ```
