@@ -8,18 +8,27 @@ Enjoy dual-core ARM Cortex-A9 @ 667 MHz, 1 GB DDR3 RAM, Gigabit Ethernet, and 9x
 
 ---
 
-## Why This Project? (The Trampoline Breakthrough)
+## Start Here: Original Project vs. Why Use This Repo
 
-Earlier efforts (such as the original `opensatellite/antminer_t9` repository) attempted to boot using a custom-built `BOOT.BIN` (FSBL + U-Boot). However:
+### 1. Try the Original `opensatellite/antminer_t9` First
+We recommend checking out the original [opensatellite/antminer_t9](https://github.com/opensatellite/antminer_t9) repository first. It was the pioneering open-source effort to turn Antminer T9 boards into Zynq devboards and established many of the fundamental pinout tables and Vivado configurations used here.
 
-1. **FSBL Failure:** Third-party or generic Zynq FSBLs frequently fail to initialize the proprietary DDR3 timing and MIO matrix on Bitmain control boards, hanging before U-Boot can even start.
-2. **The Recovery Solution:** The official Bitmain SD recovery `BOOT.BIN` (from `t9+-SD Tools.zip`) initializes the hardware, DDR3, and MIO peripherals 100% reliably on every power cycle.
-3. **The `saveenv` Brick Trap:** Stock Bitmain U-Boot executes a hardcoded `sdboot` command that always loads a recovery ramdisk (`root=/dev/ram`). Attempting to alter U-Boot environment variables using `saveenv` is catastrophic: Bitmain U-Boot writes to offset `0xE0000` in NAND (`CONFIG_ENV_OFFSET`), directly corrupting the bitstream/bootloader partition in NAND and soft-bricking the board.
-4. **Our Zero-Touch Trampoline:** We leave Bitmain's `BOOT.BIN` completely untouched and replace the recovery `uramdisk.image.gz` with a lightweight (~670 KB) **Trampoline Initramfs**. When Bitmain U-Boot executes its stock `sdboot`, our trampoline boots in under 1 second, locates the SD card's Partition 2 (`/dev/mmcblk0p2`), mounts the PYNQ ext4 filesystem, and invokes:
-   ```sh
-   exec switch_root /new_root /sbin/init
-   ```
-   Execution transfers seamlessly to Ubuntu 22.04 `systemd`. **No serial cable, no U-Boot typing, zero NAND writes.**
+If your board boots cleanly following the instructions in `opensatellite/antminer_t9`, you are all set!
+
+### 2. Why Use This Repository?
+Many users running **Antminer T9+ (Ctrl_C92 V1.2)** and **S9** boards encounter two major roadblocks with earlier methods:
+
+1. **`BOOT.BIN` Boot Failure (Silent Hang):** The custom-compiled `BOOT.BIN` provided in `opensatellite/antminer_t9` does not reliably initialize the specific DDR3 trace delay timings and MIO pinmux matrix on newer T9+ / S9 revisions. On these boards, the CPU hangs immediately in the First Stage Bootloader (FSBL) with complete silence on the serial console — U-Boot never starts.
+2. **The `saveenv` NAND Brick Trap:** To get around bootloader issues, users often attempt to change U-Boot settings using `saveenv` at the serial console. On stock Bitmain boards, this is fatal: `CONFIG_ENV_OFFSET=0xE0000` directly overwrites the bootloader/bitstream partition in NAND flash, corrupting the factory bootloader.
+
+### 3. How This Repo Solves Both Problems (The Trampoline Architecture)
+- **Proven Hardware Initialization:** We use the official Bitmain SD recovery `BOOT.BIN` (from `t9+-SD Tools.zip`), which is 100% proven to initialize the hardware, power sequencing, DDR3 memory, and MIO properly on every power cycle.
+- **Zero-Touch Trampoline Initramfs:** Stock Bitmain U-Boot executes a hardcoded `sdboot` command that always loads a recovery ramdisk (`root=/dev/ram`). Instead of modifying U-Boot or risking NAND, we replace the recovery ramdisk with our lightweight (~670 KB) **Trampoline Initramfs** (`uramdisk.image.gz`).
+- When U-Boot runs `sdboot`, our trampoline boots in under 1 second, detects the SD card's Partition 2 (`/dev/mmcblk0p2`), mounts the PYNQ ext4 filesystem, and calls:
+  ```sh
+  exec switch_root /new_root /sbin/init
+  ```
+- **Result:** You boot straight into PYNQ Ubuntu 22.04 LTS without ever needing a serial cable, without typing any U-Boot commands, and with zero risk to the onboard NAND!
 
 ---
 
@@ -261,6 +270,40 @@ except KeyboardInterrupt:
 
 ---
 
+## Interactive Jupyter Starter Notebooks
+
+The repository includes ready-to-run Jupyter Notebooks pre-configured for the Antminer T9+ hardware. 
+
+### How to Access:
+1. Connect your PC to the board via Ethernet (or your local network).
+2. Open your web browser and navigate to:
+   ```text
+   http://192.168.2.99:9090
+   # Or using mDNS hostname: http://pynq.local:9090
+   ```
+3. Enter the default PYNQ password: **`xilinx`**.
+4. Navigate to the `notebooks/` folder:
+
+### Included Notebooks:
+- **`01_board_diagnostics.ipynb`**:
+  - Validates Linux 6.6.0-xilinx kernel and dual ARM Cortex-A9 cores.
+  - Verifies 1 GB DDR3 memory and network throughput.
+  - Reads live on-chip Zynq hardware telemetry via the Linux IIO XADC driver:
+    - Chip temperature in °C
+    - Core voltage `VCCINT` (nominal 1.0V)
+    - Auxiliary voltage `VCCAUX` (nominal 1.8V)
+- **`02_bitstream_manager.ipynb`**:
+  - In-browser tool to program Vivado `.bit` files into the FPGA fabric.
+  - Automatically performs 16-bit word swapping (`conv=swab`) in memory and streams directly to `/sys/class/fpga_manager/fpga0/firmware`.
+  - Confirms hardware status and illuminates the onboard **D1 Green LED (`FPGA_DONE`)**.
+- **`03_gpio_and_led_control.ipynb`**:
+  - Uses PYNQ's `MMIO` class to interact directly with an AXI GPIO core in your PL.
+  - Provides interactive UI buttons (`ipywidgets`) to toggle and test user LEDs:
+    - **D5 Red LED** (Pin `M19`, Bank 35)
+    - **D6 Green LED** (Pin `M17`, Bank 35)
+
+---
+
 ## Repository Structure
 
 ```text
@@ -283,6 +326,10 @@ antminerT9Pynq/
 ├── examples/
 │   ├── blink_led.py          # MMIO AXI GPIO LED blinker
 │   └── fpga_manager_load.py  # Python FPGA manager loader
+├── notebooks/
+│   ├── 01_board_diagnostics.ipynb      # Hardware, memory, and XADC telemetry
+│   ├── 02_bitstream_manager.ipynb      # Browser-based safe FPGA bitstream loader
+│   └── 03_gpio_and_led_control.ipynb   # Interactive PYNQ MMIO LED control
 ├── scripts/
 │   ├── build_initramfs.sh    # Rebuilds trampoline uramdisk
 │   └── load_bit              # Shell helper to swab and load bitstreams
