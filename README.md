@@ -103,29 +103,45 @@ Locate the 4 jumpers (**JP1**, **JP2**, **JP3**, **JP4**) next to the microSD ca
 
 ---
 
-## One-Click Vivado Project & Bitstream Builder
+## Vivado Project Creation & Development Flow (GUI)
 
-To develop custom FPGA logic for this board without clicking through dozens of Zynq configuration menus, this repository provides fully automated Vivado TCL scripts:
+To develop custom FPGA logic for this board without having to manually configure dozens of Zynq registers and MIO pins in the Vivado wizard, use the provided `vivado/create_project.tcl` script:
 
-### 1. One-Click Automated Build (`build_bitstream.bat`)
-Simply double-click **`build_bitstream.bat`** (or run `.\build_bitstream.bat` in Windows terminal).
+### How to Create the Project in Vivado GUI:
 
-It will:
-1. Detect your AMD Vivado installation (default: `C:\AMDDesignTools\2026.1\Vivado\bin\vivado.bat`).
-2. Generate the complete block design with PS7 (DDR3 timing, MIO pinmux, 100 MHz AXI clock) and an AXI GPIO core at `0x41200000`.
-3. Synthesize, implement, and generate the FPGA bitstream (`t9_base.bit`) and hardware handoff (`t9_base.hwh`).
-4. Prompt you to automatically upload and program it onto the live board over SCP/SSH!
+#### Method 1: Inside the Vivado GUI (Recommended)
+1. Open **Vivado** (e.g. Vivado 2026.1).
+2. In the **Tcl Console** at the bottom of the Vivado window, navigate to the repo directory and source the script:
+   ```tcl
+   cd C:/Users/Peasant/Peasant/Xilinx/T9_Setup/antminerT9Pynq
+   source vivado/create_project.tcl
+   ```
+3. Vivado will automatically:
+   - Create the project targeting `xc7z010clg400-1`.
+   - Build the complete Block Design (`design_1`) with the exact Antminer T9+ Zynq PS configuration (DDR3 timing, MIO matrix for Ethernet/SD/UART, 100 MHz AXI clock).
+   - Add an AXI GPIO core at `0x41200000` connected to user LEDs (D5 Red `M19`, D6 Green `M17`, LED7 `F16`, LED8 `L19`).
+   - Generate the top-level HDL wrapper and attach [`constraints/t9_v12_pins.xdc`](constraints/t9_v12_pins.xdc).
 
-### 2. Interactive Vivado GUI Project Creation
-If you prefer opening the design inside the Vivado GUI to add your own custom IP:
-```bash
-# In Windows PowerShell:
+#### Method 2: Launch Vivado Directly with the Script
+From Windows PowerShell / Command Prompt:
+```powershell
 & "C:\AMDDesignTools\2026.1\Vivado\bin\vivado.bat" -mode gui -source vivado/create_project.tcl
 ```
-Or open Vivado, open the **Tcl Console**, and run:
-```tcl
-source vivado/create_project.tcl
-```
+
+---
+
+### How to Develop & Generate a Bitstream:
+1. **Add Custom Logic:** In the Vivado Block Design canvas, add any Xilinx IP (AXI BRAM, AXI UART, AXI PWM, custom RTL) or connect PL pins from [`constraints/t9_v12_pins.xdc`](constraints/t9_v12_pins.xdc) to headers `J1–J9`.
+2. **Generate Bitstream:** In the left-hand **Flow Navigator**, click **Generate Bitstream** (or press `F6`).
+3. **Locate Output File:** Once implementation completes, your bitstream will be in:
+   ```text
+   build_vivado/t9_pynq_base.runs/impl_1/design_1_wrapper.bit
+   ```
+4. **Deploy to Board:** Transfer and program it over SSH:
+   ```bash
+   scp build_vivado/t9_pynq_base.runs/impl_1/design_1_wrapper.bit xilinx@192.168.2.99:/home/xilinx/my_design.bit
+   ssh xilinx@192.168.2.99 "sudo load_bit /home/xilinx/my_design.bit"
+   ```
 
 ### Hardware Configuration Summary
 - **Target Part:** `xc7z010clg400-1`
@@ -429,7 +445,6 @@ antminerT9Pynq/
 ├── vivado/
 │   ├── create_project.tcl    # Automated Vivado block design & PS7 generator
 │   └── build_bitstream.tcl   # Batch synthesis, implementation, and .bit exporter
-├── build_bitstream.bat       # One-click Windows bitstream build script
 └── README.md
 ```
 
