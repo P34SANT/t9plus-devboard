@@ -103,22 +103,46 @@ Locate the 4 jumpers (**JP1**, **JP2**, **JP3**, **JP4**) next to the microSD ca
 
 ---
 
-## Vivado Hardware Configuration
+## One-Click Vivado Project & Bitstream Builder
 
-When building Vivado designs for the Antminer T9+ / S9:
+To develop custom FPGA logic for this board without clicking through dozens of Zynq configuration menus, this repository provides fully automated Vivado TCL scripts:
 
+### 1. One-Click Automated Build (`build_bitstream.bat`)
+Simply double-click **`build_bitstream.bat`** (or run `.\build_bitstream.bat` in Windows terminal).
+
+It will:
+1. Detect your AMD Vivado installation (default: `C:\AMDDesignTools\2026.1\Vivado\bin\vivado.bat`).
+2. Generate the complete block design with PS7 (DDR3 timing, MIO pinmux, 100 MHz AXI clock) and an AXI GPIO core at `0x41200000`.
+3. Synthesize, implement, and generate the FPGA bitstream (`t9_base.bit`) and hardware handoff (`t9_base.hwh`).
+4. Prompt you to automatically upload and program it onto the live board over SCP/SSH!
+
+### 2. Interactive Vivado GUI Project Creation
+If you prefer opening the design inside the Vivado GUI to add your own custom IP:
+```bash
+# In Windows PowerShell:
+& "C:\AMDDesignTools\2026.1\Vivado\bin\vivado.bat" -mode gui -source vivado/create_project.tcl
+```
+Or open Vivado, open the **Tcl Console**, and run:
+```tcl
+source vivado/create_project.tcl
+```
+
+### Hardware Configuration Summary
 - **Target Part:** `xc7z010clg400-1`
-- **PS-PL Interface:** Non-Secure Enablement, `M_AXI_GP0` Enabled
-- **DDR3 Memory:** MT41K128M16JT-125:K (D9PTK), 32-bit bus width, no ECC
+- **PS-PL Interface:** `M_AXI_GP0` Enabled (32-bit AXI Master @ 100 MHz)
+- **DDR3 Memory:** MT41K128M16JT-125:K (32-bit width, 533 MHz, no ECC)
+- **Bank Voltages:** Bank 0 = 3.3V, Bank 1 = 1.8V (RGMII Broadcom PHY)
 - **MIO Configuration:**
   - `MIO0`, `MIO2–14`: NAND Flash
   - `MIO16–27`, `MIO52–53`: ENET0 + MDIO (Broadcom B50612D, PHY Address = 1)
-  - `MIO40–45`: SD0
-  - `MIO48–49`: UART1 (Serial console on J4 header)
-- **Ethernet PHY:** Broadcom B50612D (`reg = <1>`)
+  - `MIO40–45`: SD0 (microSD Card)
+  - `MIO48–49`: UART1 (Debug console on J4 header)
+- **Default AXI GPIO (`0x41200000`):**
+  - Channel 1 (2 bits): `leds_2bits[0]` -> D5 Red (`M19`), `leds_2bits[1]` -> D6 Green (`M17`)
+  - Channel 2 (2 bits): `leds_ext_2bits[0]` -> LED7 (`F16`), `leds_ext_2bits[1]` -> LED8 (`L19`)
 
 ### Master Constraint File
-Include [`constraints/t9_v12_pins.xdc`](constraints/t9_v12_pins.xdc) in your Vivado project. It pre-maps all PL LEDs, clocks, fan headers, and J1–J9 expansion connectors.
+[`constraints/t9_v12_pins.xdc`](constraints/t9_v12_pins.xdc) maps all onboard LEDs, oscillator clocks, fan headers, and the 9 hashboard expansion headers (Banks 34 & 35).
 
 ---
 
@@ -402,6 +426,10 @@ antminerT9Pynq/
 ├── scripts/
 │   ├── build_initramfs.sh    # Rebuilds trampoline uramdisk
 │   └── load_bit              # Shell helper to swab and load bitstreams
+├── vivado/
+│   ├── create_project.tcl    # Automated Vivado block design & PS7 generator
+│   └── build_bitstream.tcl   # Batch synthesis, implementation, and .bit exporter
+├── build_bitstream.bat       # One-click Windows bitstream build script
 └── README.md
 ```
 

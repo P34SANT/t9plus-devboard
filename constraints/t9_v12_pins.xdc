@@ -10,20 +10,22 @@
 ##############################################################################
 # Onboard User LEDs (3.3V Bank 35)
 ##############################################################################
-# D5 Red LED
-set_property PACKAGE_PIN M19 [get_ports {led_red}]
-set_property IOSTANDARD LVCMOS33 [get_ports {led_red}]
+# D5 Red LED (Channel 1, Bit 0)
+set_property PACKAGE_PIN M19 [get_ports {leds_2bits[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {leds_2bits[0]}]
 
-# D6 Green LED
-set_property PACKAGE_PIN M17 [get_ports {led_green}]
-set_property IOSTANDARD LVCMOS33 [get_ports {led_green}]
+# D6 Green LED (Channel 1, Bit 1)
+set_property PACKAGE_PIN M17 [get_ports {leds_2bits[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {leds_2bits[1]}]
 
-# Additional PL User LEDs
-set_property PACKAGE_PIN F16 [get_ports {led7}]
-set_property IOSTANDARD LVCMOS33 [get_ports {led7}]
+# Additional PL User LEDs (Channel 2)
+# LED7 (Bit 0)
+set_property PACKAGE_PIN F16 [get_ports {leds_ext_2bits[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {leds_ext_2bits[0]}]
 
-set_property PACKAGE_PIN L19 [get_ports {led8}]
-set_property IOSTANDARD LVCMOS33 [get_ports {led8}]
+# LED8 (Bit 1)
+set_property PACKAGE_PIN L19 [get_ports {leds_ext_2bits[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {leds_ext_2bits[1]}]
 
 ##############################################################################
 # Onboard Oscillator Clocks (Bank 34, 3.3V)

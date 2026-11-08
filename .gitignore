@@ -1,0 +1,16 @@
+# Vivado temporary files and build artifacts
+build_vivado/
+.Xil/
+*.log
+*.jou
+*.str
+*.tmp
+hd_visual/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local bitstreams
+t9_base.bit
+t9_base.hwh
