@@ -450,6 +450,21 @@ antminerT9Pynq/
 
 ---
 
+## Dedicated Projects & Ecosystem
+
+### 🚀 Turnkey CMSIS-DAP v2 Debugger & Hardware Pod (`t9plus_debugger`)
+If you want to use the Antminer T9+ control board as a high-speed, network-attached **ARM CMSIS-DAP v2 debug probe and dual-channel UART pod** (interfacing via the Bank 34 Fan Headers), check out the dedicated repository:
+
+👉 **[P34SANT/t9plus_debugger](https://github.com/P34SANT/t9plus_debugger)**
+
+Features include:
+- Native High-Speed USB 2.0 (480 Mbps) WinUSB emulation over USB/IP.
+- Zero-driver plug-and-play support in STM32CubeIDE, Keil MDK, OpenOCD, and VS Code.
+- Direct 3.3V SWD and Dual-UART pinout on 4-pin Fan Headers (FAN3-FAN6).
+- Zero-interference configuration with PL user LEDs grounded solid.
+
+---
+
 ## License & Acknowledgements
 - Based on hardware research and reverse-engineering from Bitcointalk, MMTO Arizona Zynq documentation, and `opensatellite/antminer_t9`.
 - Released under the MIT License for surplus hardware repurposing and education.

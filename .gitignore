@@ -14,3 +14,8 @@ __pycache__/
 # Local bitstreams
 t9_base.bit
 t9_base.hwh
+build_programmer/
+*.dmp
+*.logfile
+t9_programmer.bin
+session-*.md
